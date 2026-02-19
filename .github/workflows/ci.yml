@@ -27,7 +27,8 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Run tests
-        run: npm test
+      - name: Run backend tests
         env:
           NODE_ENV: test
+          NODE_OPTIONS: "--experimental-vm-modules --no-warnings=ExperimentalWarning"
+        run: npm test
