@@ -1,0 +1,29 @@
+# Backend .dockerignore file -
+# This file tells Docker to ignore when building the Docker image for faster builds, more lightweight image and better security.
+
+# Ignore node modules folder
+# node_modules will be installed fresh in the container using npm install
+node_modules
+
+# Ignore log files
+npm-debug.log
+
+# Ignore environment variable files (containing sensitive data like secrets and keys, important for security)
+.env
+.env.local
+.env.*.local
+
+# Ignore git files and folders
+.git
+.gitignore
+
+# Ignore IDE specific files and folders
+.vscode
+
+# Ignore test files and folders
+__tests__
+*.test.js
+
+# Ignore linting configuration files
+.eslintrc.cjs
+.prettierrc.json

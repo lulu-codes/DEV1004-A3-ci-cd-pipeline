@@ -1,0 +1,70 @@
+# Docker Compose file for Testing environment
+# Runs automated tests in isolated containers
+# Tests use in-memory MongoDB (mongodb-memory-server), so no MongoDB container needed
+
+# Name of the Docker Compose project for test environment
+name: century-screening-room-test
+
+# All services for testing
+
+services:
+  # Backend Service - Runs backend tests
+  backend-test:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      args:
+        NODE_ENV: test
+    
+    image: reelcanon-backend:test-v1.0
+    container_name: reelcanon-backend-test
+    
+    environment:
+      # Test environment configuration
+      - NODE_ENV=test
+      
+      # Database URI (tests use in-memory MongoDB, but env var needed for some test configs)
+      - LOCAL_DB_URI=mongodb://localhost:27017/movie_db_test
+      - DATABASE_URI=${DATABASE_URI:-mongodb://localhost:27017/movie_db_test}
+      
+      # API keys and secrets (read from environment or use defaults)
+      - OMDB_API_KEY=${OMDB_API_KEY:-}
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY:-test_secret_key_for_testing_only}
+      - TOKEN_HEADER_KEY=authorization
+    
+    # Run tests as the container command
+    command: npm test
+    
+    volumes:
+      # Anonymous volume for node_modules (prevents host node_modules from interfering)
+      - /app/node_modules
+    
+    # Don't restart on failure (fail fast for CI/CD)
+    restart: "no"
+
+  # Frontend Service - Runs frontend tests
+  frontend-test:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        NODE_ENV: test
+        VITE_API_URL: http://localhost:3000
+    
+    image: reelcanon-frontend:test-v1.0
+    container_name: reelcanon-frontend-test
+    
+    environment:
+      # CI environment variable tells Vitest to exit after running (not watch mode)
+      - CI=true
+      - NODE_ENV=test
+    
+    # Run tests as the container command
+    command: npm test
+    
+    volumes:
+      # Anonymous volume for node_modules (prevents host node_modules from interfering)
+      - /app/node_modules
+    
+    # Don't restart on failure (fail fast for CI/CD)
+    restart: "no"

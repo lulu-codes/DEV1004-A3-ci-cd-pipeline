@@ -1,0 +1,131 @@
+# Docker Compose file for "The Century Screening Room" full stack MERN app
+# This runs 3 containers including the Frontend (React/Vite), Backend (Express.js) and MongoDB (database)
+# Containers communicate through Docker's internal network using service names
+
+name: century-screening-room-dev
+
+# These are all the services that will run as containers
+services:
+  # Backend API container
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      args:
+        NODE_ENV: development
+
+    image: century-screening-room-backend:dev-v1.0
+    container_name: century-screening-room-backend-dev
+
+    ports:
+      - "3000:3000"
+
+    environment:
+      - HOST=0.0.0.0
+      - NODE_ENV=development
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY:-dev_secret_key_change_in_production}
+      - DATABASE_URI=mongodb://mongodb:27017/movie_db
+      # Using "mongodb" service name
+      - LOCAL_DB_URI=mongodb://mongodb:27017/movie_db
+      # Same as DATABASE_URI for now since we're using containerised mongo and not MongoDB Atlas
+      - OMDB_API_KEY=${OMDB_API_KEY:-}
+      - TOKEN_HEADER_KEY=authorization
+
+    depends_on:
+      - mongodb
+      # Backend needs database to be ready first
+
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+    restart: unless-stopped
+
+    networks:
+      - app-network
+      # Connects backend to app-network so frontend can reach it
+
+  # MongoDB database container
+  mongodb:
+    image: mongo:7.0
+    # Using official mongo image, no need to build our own
+    container_name: century-screening-room-mongodb-dev
+
+    ports:
+      - "27017:27017"
+
+    environment:
+      - MONGO_DB_NAME=movie_db
+      # Creates the database on first startup
+
+    volumes:
+      - mongodb_data:/data/db
+      # This keeps data even if container stops,without this, all the data disappears when container is removed
+
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      # Checks if mongodb is responding
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 40s
+
+    restart: unless-stopped
+
+    networks:
+      - app-network
+      # Connects mongodb to app-network so backend can reach it
+
+  # Frontend container
+  frontend:
+    build:
+      context: ./frontend/
+      dockerfile: Dockerfile
+      args:
+        NODE_ENV: development
+        VITE_API_URL: http://localhost:3000
+
+    image: reelcanon-frontend:dev-v1.0
+    container_name: reelcanon-frontend-dev
+
+    # Maps port 5000 on my computer to port 5000 in container
+    ports:
+      - "5000:5000"
+
+    # Sets the environment variables for the container
+    environment:
+      - NODE_ENV=development
+      - VITE_API_URL=http://localhost:3000
+      # Note: Vite embeds env vars at build time (not runtime)
+      # This matches the build arg above for consistency (though not used at runtime)
+
+    depends_on:
+      - backend
+      # Makes sure backend container starts first
+
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:5000"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+    restart: unless-stopped
+
+    networks:
+      - app-network
+      # Connects frontend to app-network so backend can reach it
+
+# Volumes for persistant data
+volumes:
+  mongodb_data:
+
+# Network for the containers to communicate with each other without exposing ports
+networks:
+  app-network:
+    # Creates a bridge network named "century-screening-room-network"
+    name: century-screening-room-network
+    driver: bridge
