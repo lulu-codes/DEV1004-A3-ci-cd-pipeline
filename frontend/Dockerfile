@@ -21,7 +21,7 @@ RUN apk add --no-cache wget
 COPY package.json package-lock.json ./
 
 # Install all dependencies (dev dependencies needed for Vite dev server)
-RUN npm install
+RUN npm ci
 
 # Copy application source code
 COPY . .
@@ -38,7 +38,7 @@ USER nodejs
 EXPOSE 5000
 
 # Health check to verify container is running
-HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
     CMD wget --no-verbose --tries=1 --spider http://localhost:5000 || exit 1
 
 # Start Vite development server with hot-reload

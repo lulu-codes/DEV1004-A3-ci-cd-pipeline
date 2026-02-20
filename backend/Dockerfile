@@ -38,6 +38,6 @@ EXPOSE 3000
 # Configure a health check to ensure the container is running properly
 # This will check by calling the /health endpoint every 30 secs,
 # If after 3 failed attempts, then it will mark the container as unhealthy
-HEALTHCHECK --interval=30s --retries=3 \
-    node -e "require('http').get('http://localhost:3000/health', res => { if (res.statusCode !== 200) process.exit(1) }).on('error', () => process.exit(1))"
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+    CMD wget --no-verbose --tries=1 --spider http://localhost:5000 || exit 1
     # added this health check endpoint for Docker in server.js file

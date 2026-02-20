@@ -31,10 +31,11 @@ services:
       - OMDB_API_KEY=${OMDB_API_KEY:-}
       - TOKEN_HEADER_KEY=authorization
 
+    # Backend needs database to be ready first
     depends_on:
       - mongodb
-      # Backend needs database to be ready first
 
+    # Health check to make sure backend is responding before dependant services (like frontend) try to connect
     healthcheck:
       test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/health"]
       interval: 30s
@@ -44,21 +45,21 @@ services:
 
     restart: unless-stopped
 
+    # Connects backend to app-network so frontend can reach it
     networks:
       - app-network
-      # Connects backend to app-network so frontend can reach it
 
   # MongoDB database container
   mongodb:
     image: mongo:7.0
     # Using official mongo image, no need to build our own
-    container_name: century-screening-room-mongodb-dev
+    container_name: mongodb-dev
 
     ports:
       - "27017:27017"
 
     environment:
-      - MONGO_DB_NAME=movie_db
+      - MONGO_INITDB_DATABASE=movie_db
       # Creates the database on first startup
 
     volumes:
@@ -77,7 +78,6 @@ services:
 
     networks:
       - app-network
-      # Connects mongodb to app-network so backend can reach it
 
   # Frontend container
   frontend:
@@ -88,8 +88,8 @@ services:
         NODE_ENV: development
         VITE_API_URL: http://localhost:3000
 
-    image: reelcanon-frontend:dev-v1.0
-    container_name: reelcanon-frontend-dev
+    image: century-screening-room-frontend:dev-v1.0
+    container_name: century-screening-room-frontend-dev
 
     # Maps port 5000 on my computer to port 5000 in container
     ports:
@@ -99,8 +99,6 @@ services:
     environment:
       - NODE_ENV=development
       - VITE_API_URL=http://localhost:3000
-      # Note: Vite embeds env vars at build time (not runtime)
-      # This matches the build arg above for consistency (though not used at runtime)
 
     depends_on:
       - backend
@@ -119,7 +117,7 @@ services:
       - app-network
       # Connects frontend to app-network so backend can reach it
 
-# Volumes for persistant data
+# Volumes for persistant data storage for MongoBD Data
 volumes:
   mongodb_data:
 
