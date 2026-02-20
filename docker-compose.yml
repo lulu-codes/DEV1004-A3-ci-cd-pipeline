@@ -120,6 +120,7 @@ services:
 # Volumes for persistant data storage for MongoBD Data
 volumes:
   mongodb_data:
+    name: century-screening-room-mongodb-data
 
 # Network for the containers to communicate with each other without exposing ports
 networks:

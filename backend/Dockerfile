@@ -1,13 +1,21 @@
 # Backend Dockerfile -
-# This file contains instructions for Docker to build a container image for the backend express API server
+# This file contains instructions for Docker to build a Development environment container for Express.js API server
 
-# Use node as starting base image
-FROM node:22-alpine
+# # Use node as starting base image
+# FROM node:22-alpine
+
+# Use Debian-based node image instead of Alpine for mongodb-memory-server compatibility
+FROM node:22-slim
 
 # Set the working directory of the Docker image (where everything else will happen in)
 WORKDIR /app
 
-# Copy the repo files into the DOcker image
+# Install wget as not included in node:22-slim (needed for health checks)
+RUN apt-get update && \
+    apt-get install -y wget && \
+    rm -rf /var/lib/apt/lists/*
+
+# Copy the package files (for better layer caching as Docker will reuse if pkg files don't change)
 COPY package.json package-lock.json ./
 
 # Install all dependencies of the repo before copying the project source code
@@ -18,26 +26,27 @@ RUN npm install
 COPY src ./src/
 
 # Create non-root user for security (Docker runs as root by default, this is for best practice)
-RUN addgroup -g 1001 -S nodejs && \
-    adduser -S nodejs -u 1001
+# Then change ownership of all files to the nodejs user and group
+RUN groupadd -g 1001 nodejs && \
+    useradd -u 1001 -g nodejs nodejs && \
+    chown -R nodejs:nodejs /app
 
-# Change ownership of all files and switch to the nodejs user
-RUN chown -R nodejs:nodejs /app
+# Switch to non-root user
 USER nodejs
 
-# Set the environment variables (can be overridden at runtime)
+# Set the development environment variables
 ARG NODE_ENV=development
 ENV NODE_ENV=${NODE_ENV}
 
-# Run the app (when container starts)
-CMD ["npm", "start"]
-
-# Expose the app port (tells Docker that this app listens on this port)
+# Expose the backend port (tells Docker that this app listens on this port)
 EXPOSE 3000
+
+# Start the application (when container starts)
+CMD ["npm", "start"]
 
 # Configure a health check to ensure the container is running properly
 # This will check by calling the /health endpoint every 30 secs,
 # If after 3 failed attempts, then it will mark the container as unhealthy
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
-    CMD wget --no-verbose --tries=1 --spider http://localhost:5000 || exit 1
+    CMD wget --no-verbose --tries=1 --spider http://localhost:3000/health || exit 1
     # added this health check endpoint for Docker in server.js file

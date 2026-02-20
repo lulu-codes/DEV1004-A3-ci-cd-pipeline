@@ -19,26 +19,24 @@ services:
     image: century-screening-room-backend:test-v1.0
     container_name: century-screening-room-backend-test
 
-    # Test environment configuration
-
     environment:
-      # Test environment configuration
+      # Test environment config
       - NODE_ENV=test
-
       # Database URI (tests use in-memory MongoDB, but env var needed for some test configs)
-      - LOCAL_DB_URI=mongodb://localhost:27017/movie_db_test
       - DATABASE_URI=${DATABASE_URI:-mongodb://localhost:27017/movie_db_test}
-
+      - LOCAL_DB_URI=mongodb://localhost:27017/movie_db_test
       # API keys and secrets (read from environment or use defaults)
       - OMDB_API_KEY=${OMDB_API_KEY:-}
       - JWT_SECRET_KEY=${JWT_SECRET_KEY:-test_secret_key_for_testing_only}
       - TOKEN_HEADER_KEY=authorization
+      # Quiet mode for dotenv to prevent warnings about missing env vars in test environment
+      - DOTENV_CONFIG_QUIET=true
 
     # Run tests as the container command
     command: npm test
 
     volumes:
-      # Anonymous volume for node_modules (prevents host node_modules from interfering)
+      # Anonymous volume for node_modules
       - /app/node_modules
 
     # Don't restart on failure (fail fast for CI/CD)
