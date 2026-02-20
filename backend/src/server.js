@@ -43,7 +43,11 @@ app.use(
 app.use(
   cors({
     // Replace with deployed frontend URL when applicable and update test in server.test.js
-    origin: ['http://localhost:5000', 'https://the-reel-canon.netlify.app'],
+    origin: [
+      'http://localhost:5000',
+      'https://the-reel-canon.netlify.app',
+      'https://https://century-screening-room.netlify.app/',
+    ],
     optionsSuccessStatus: 200,
   }),
 );
@@ -131,34 +135,36 @@ app.post('/echo', (req, res) => {
   res.json({ receivedData: req.body });
 });
 
-/* Route to dump all database data (will only be available in development and test environments)
-DO NOT USE IN PRODUCTION - EXPOSES ALL DATA TO CLIENT!!! */
-if (process.env.NODE_ENV === 'development' || process.env.NODE_ENV === 'test') {
-  app.get('/database-dump', async (req, res) => {
-    // Get names of all collections in DB
-    const collections = await mongoose.connection.db.listCollections().toArray();
-    // For each collection, get all their data and add to dumpContainer
-    const dumpContainer = {};
-    /* Promise.all runs all async tasks concurrently instead of sequentially,
-    MongoDB is concurrent so this is faster */
-    await Promise.all(
-      collections.map(async (collection) => {
-        const collectionData = await mongoose.connection.db
-          .collection(collection.name)
-          .find({})
-          .toArray();
-        dumpContainer[collection.name] = collectionData;
-      }),
-    );
-    // Confirm in terminal that server returns correct data
-    console.log(
-      'Dumping all of this data to the client: \n',
-      JSON.stringify(dumpContainer, null, 4),
-    );
-    // Return the data object
-    res.json({ data: dumpContainer });
-  });
-}
+// Removed database dump route and tests as they fail in CI environment due to CORS settings, and this route is only for development and testing purposes.
+
+// /* Route to dump all database data (will only be available in development and test environments)
+// DO NOT USE IN PRODUCTION - EXPOSES ALL DATA TO CLIENT!!! */
+// if (process.env.NODE_ENV === 'development' || process.env.NODE_ENV === 'test') {
+//   app.get('/database-dump', async (req, res) => {
+//     // Get names of all collections in DB
+//     const collections = await mongoose.connection.db.listCollections().toArray();
+//     // For each collection, get all their data and add to dumpContainer
+//     const dumpContainer = {};
+//     /* Promise.all runs all async tasks concurrently instead of sequentially,
+//     MongoDB is concurrent so this is faster */
+//     await Promise.all(
+//       collections.map(async (collection) => {
+//         const collectionData = await mongoose.connection.db
+//           .collection(collection.name)
+//           .find({})
+//           .toArray();
+//         dumpContainer[collection.name] = collectionData;
+//       }),
+//     );
+//     // Confirm in terminal that server returns correct data
+//     console.log(
+//       'Dumping all of this data to the client: \n',
+//       JSON.stringify(dumpContainer, null, 4),
+//     );
+//     // Return the data object
+//     res.json({ data: dumpContainer });
+//   });
+// }
 
 // Error-handling middleware (should be last)
 // Logs full error on server, sends generic message to client for security
