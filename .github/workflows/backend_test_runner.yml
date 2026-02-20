@@ -35,19 +35,11 @@ jobs:
         # Run backend tests in Docker container, passing the environment variables
       - name: Run Tests
         env:
-          # MongoDB Database connection for tests
-          DATABASE_URI: mongodb://mongodb:27017/movie_db_test
-
-          # Secret keys passed to workflow (from stored secrets in GitHub Actions)
+          NODE_ENV: test
           JWT_SECRET_KEY: ${{ secrets.JWT_SECRET_KEY }}
           OMDB_API_KEY: ${{ secrets.OMDB_API_KEY }}
-
-          # Header key for API configuration
           TOKEN_HEADER_KEY: authorization
 
-        # Run the backend tests using Docker Compose, ensuring it builds the image and exits with the correct code based on test results
-        # npm test exits with 0 → command exits with 0 → step passes ✅
-        # npm test exits with 1 → command exits with 1 → step fails ❌
         run: |
           docker compose -f docker-compose.test.yml up backend-test \
             --build \

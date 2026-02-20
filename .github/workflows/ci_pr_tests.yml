@@ -24,7 +24,7 @@ jobs:
 
       - name: Run backend tests
         env:
-          DATABASE_URI: mongodb://mongodb:27017/movie_db_test
+          NODE_ENV: test
           JWT_SECRET_KEY: ${{ secrets.JWT_SECRET_KEY }}
           OMDB_API_KEY: ${{ secrets.OMDB_API_KEY }}
           TOKEN_HEADER_KEY: authorization
