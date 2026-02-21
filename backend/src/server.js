@@ -45,8 +45,8 @@ app.use(
     // Replace with deployed frontend URL when applicable and update test in server.test.js
     origin: [
       'http://localhost:5000',
-      'https://the-reel-canon.netlify.app',
-      'https://https://century-screening-room.netlify.app/',
+      'https://the-reel-canon.netlify.app', // previous org deployment
+      'https://century-screening-room.netlify.app', // new individual deployment
     ],
     optionsSuccessStatus: 200,
   }),
