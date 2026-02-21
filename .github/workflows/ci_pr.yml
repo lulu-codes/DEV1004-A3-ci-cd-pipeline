@@ -1,0 +1,51 @@
+# CI WORKFLOW: CI Pull Request Tests
+# PURPOSE: Checks code to ensure it is tested and ready to merge into main
+# TRIGGER: pull_request to main branch
+
+name: CI Pull Request Tests
+
+on:
+  pull_request:
+    branches:
+      - main
+
+# Cancel outdated runs if new commit pushed
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend-tests:
+    name: Backend Tests
+    runs-on: ubuntu-latest
+    uses: ./.github/workflows/test_backend.yml
+    # Passes the secrets to the backend tests workflow from stored secrets in GitHub Actions
+    secrets:
+      JWT_SECRET_KEY: ${{ secrets.JWT_SECRET_KEY }}
+      OMDB_API_KEY: ${{ secrets.OMDB_API_KEY }}
+
+  frontend-tests:
+    name: Frontend Tests
+    uses: ./.github/workflows/test_frontend.yml
+
+  # This job validates the quality of the PR by checking if the backend and frontend tests passed
+  pr-quality-validation:
+    name: PR Quality Validation
+    runs-on: ubuntu-latest
+    needs: [backend-tests, frontend-tests]
+    if: always()
+    steps:
+      - name: Check all tests passed
+        # This step checks the results of the backend and frontend tests and exits with code based on the results
+        # If both tests passed, the PR is ready to merge, otherwise it is blocked from merging
+        run: |
+          echo "Backend result:  ${{ needs.backend-tests.result }}"
+          echo "Frontend result: ${{ needs.frontend-tests.result }}"
+
+          if [[ "${{ needs.backend-tests.result }}"  == "success" && \
+                "${{ needs.frontend-tests.result }}" == "success" ]]; then
+            echo "All tests passed: PR is ready to merge"
+            exit 0
+          else
+            echo "Tests failed: PR is blocked from merging"
+            exit 1
