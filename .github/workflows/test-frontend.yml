@@ -34,24 +34,25 @@ jobs:
         uses: docker/setup-buildx-action@v3
 
         # Run frontend tests in Docker container
-      - name: Run Tests
+      - name: Run Frontend Tests
+        id: run-tests
 
         # This runs the tests using Docker Compose, ensuring it builds the image and exits with the correct code based on test results
         # npm test exits with 0 → command exits with 0 → step passes ✅
         # npm test exits with 1 → command exits with 1 → step fails ❌
         run: |
-          docker compose -f docker-compose.test.yml up backend-test \
+          docker compose -f docker-compose.test.yml up frontend-test \
             --build \
             --abort-on-container-exit \
-            --exit-code-from backend-test
+            --exit-code-from frontend-test 2>&1 | tee frontend-test.log
 
         # Upload test logs to GitHub Actions Artifacts (stored for persistant data set to retain for 30 days)
       - name: Upload test logs
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: backend-test-logs-${{ github.run_id }}
-          path: backend-test.log
+          name: frontend-test-logs-${{ github.run_id }}
+          path: frontend-test.log
           retention-days: 30
 
         # Cleanup containers and volumes after tests run, regardless of test success or failure
