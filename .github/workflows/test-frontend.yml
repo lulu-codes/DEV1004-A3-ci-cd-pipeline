@@ -8,6 +8,12 @@ on:
   workflow_call:
     # No secrets required as frontend doesn't need API keys
 
+    # This outputs the outcome of the tests results to the workflow
+    outputs:
+      result:
+        description: "Outcome of the frontend test job"
+        value: ${{ jobs.test-frontend.outputs.result }}
+
   # Allow manual triggering for testing this workflow independently
   workflow_dispatch:
 
@@ -15,6 +21,8 @@ jobs:
   test-frontend:
     name: Frontend Tests
     runs-on: ubuntu-latest
+    outputs:
+      result: ${{ steps.run-tests.outcome }}
 
     steps:
       # Downloads repo code to runner
@@ -28,14 +36,23 @@ jobs:
         # Run frontend tests in Docker container
       - name: Run Tests
 
-        # Run the frontend tests using Docker Compose, ensuring it builds the image and exits with the correct code based on test results
+        # This runs the tests using Docker Compose, ensuring it builds the image and exits with the correct code based on test results
         # npm test exits with 0 → command exits with 0 → step passes ✅
         # npm test exits with 1 → command exits with 1 → step fails ❌
         run: |
-          docker compose -f docker-compose.test.yml up frontend-test \
+          docker compose -f docker-compose.test.yml up backend-test \
             --build \
             --abort-on-container-exit \
-            --exit-code-from frontend-test
+            --exit-code-from backend-test
+
+        # Upload test logs to GitHub Actions Artifacts (stored for persistant data set to retain for 30 days)
+      - name: Upload test logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-test-logs-${{ github.run_id }}
+          path: backend-test.log
+          retention-days: 30
 
         # Cleanup containers and volumes after tests run, regardless of test success or failure
       - name: Cleanup
