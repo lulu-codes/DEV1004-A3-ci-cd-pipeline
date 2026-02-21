@@ -23,7 +23,7 @@ jobs:
     name: Build and Push Docker Image
     runs-on: ubuntu-latest
     outputs:
-      tag: ${{ steps.version-sha.outputs.tag }}
+      image-tag: ${{ steps.version-sha.outputs.image-tag }}
 
     steps:
       - name: Checkout code
@@ -38,10 +38,10 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      # Creates a version of the commit SHA for image tagging
-      - name: Generate version SHA tag
+      # Creates a shorter version of the commit SHA for image tagging
+      - name: Generate shorterversion SHA image tag
         id: version-sha
-        run: echo "tag=main-$(echo $GITHUB_SHA)" >> $GITHUB_OUTPUT
+        run: echo "image-tag=main-$(echo $GITHUB_SHA | cut -c1-7)" >> $GITHUB_OUTPUT
 
       # Build and push the production image to Docker Hub
       - name: Build and push production image
@@ -54,19 +54,19 @@ jobs:
           # Generate 2 tags: latest (always current) + version SHA tag (permanent revision history)
           tags: |
             ${{ secrets.DOCKERHUB_USERNAME }}/century-screening-room-backend:latest
-            ${{ secrets.DOCKERHUB_USERNAME }}/century-screening-room-backend:${{ steps.version-sha.outputs.tag }}
+            ${{ secrets.DOCKERHUB_USERNAME }}/century-screening-room-backend:${{ steps.version-sha.outputs.image-tag }}
           # Reuse cached layers from the last push to speed up builds
           cache-from: type=registry,ref=${{ secrets.DOCKERHUB_USERNAME }}/century-screening-room-backend:latest
           cache-to: type=inline
 
       # Output the image tag to the workflow
       - name: Output image tag
-        run: echo "image-tag=${{ steps.version-sha.outputs.tag }}" >> $GITHUB_OUTPUT
+        run: echo "image-tag=${{ steps.version-sha.outputs.image-tag }}" >> $GITHUB_OUTPUT
 
       # Upload the image tag to GitHub Actions Artifacts (stored for persistant data set to retain for 30 days)
       - name: Log image tag to artifact
         uses: actions/upload-artifact@v4
         with:
           name: docker-image-tag
-          path: ${{ steps.version-sha.outputs.tag }}
+          path: ${{ steps.version-sha.outputs.image-tag }}
           retention-days: 30
