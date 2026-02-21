@@ -43,6 +43,7 @@ jobs:
         id: version-sha
         run: echo "tag=main-$(echo $GITHUB_SHA)" >> $GITHUB_OUTPUT
 
+      # Build and push the production image to Docker Hub
       - name: Build and push production image
         uses: docker/build-push-action@v6
         with:
@@ -58,9 +59,11 @@ jobs:
           cache-from: type=registry,ref=${{ secrets.DOCKERHUB_USERNAME }}/century-screening-room-backend:latest
           cache-to: type=inline
 
+      # Output the image tag to the workflow
       - name: Output image tag
         run: echo "image-tag=${{ steps.version-sha.outputs.tag }}" >> $GITHUB_OUTPUT
 
+      # Upload the image tag to GitHub Actions Artifacts (stored for persistant data set to retain for 30 days)
       - name: Log image tag to artifact
         uses: actions/upload-artifact@v4
         with:
