@@ -1,0 +1,72 @@
+# REUSABLE WORKFLOW: Build and Push Docker Image
+# PURPOSE: Builds the production Docker image and pushes it to Docker Hub
+# CALLED BY: ci_main.yml after backend tests pass successfuly
+
+name: Build and Push Docker Image
+
+on:
+  workflow_call:
+    secrets:
+      DOCKERHUB_USERNAME:
+        description: "Docker Hub username"
+        required: true
+      DOCKERHUB_TOKEN:
+        description: "Docker Hub access token"
+        required: true
+    outputs:
+      image-tag:
+        description: "The SHA-based image tag that was pushed"
+        value: ${{ jobs.build.outputs.image-tag }}
+
+jobs:
+  build:
+    name: Build and Push Docker Image
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.version-sha.outputs.tag }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      # Creates a version of the commit SHA for image tagging
+      - name: Generate version SHA tag
+        id: version-sha
+        run: echo "tag=main-$(echo $GITHUB_SHA)" >> $GITHUB_OUTPUT
+
+      # Build and push the production image to Docker Hub
+      - name: Build and push production image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./backend
+          file: ./backend/Dockerfile
+          target: production
+          push: true
+          # Generate 2 tags: latest (always current) + version SHA tag (permanent revision history)
+          tags: |
+            ${{ secrets.DOCKERHUB_USERNAME }}/century-screening-room-backend:latest
+            ${{ secrets.DOCKERHUB_USERNAME }}/century-screening-room-backend:${{ steps.version-sha.outputs.tag }}
+          # Reuse cached layers from the last push to speed up builds
+          cache-from: type=registry,ref=${{ secrets.DOCKERHUB_USERNAME }}/century-screening-room-backend:latest
+          cache-to: type=inline
+
+      # Output the image tag to the workflow
+      - name: Output image tag
+        run: echo "image-tag=${{ steps.version-sha.outputs.tag }}" >> $GITHUB_OUTPUT
+
+      # Upload the image tag to GitHub Actions Artifacts (stored for persistant data set to retain for 30 days)
+      - name: Log image tag to artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: docker-image-tag
+          path: ${{ steps.version-sha.outputs.tag }}
+          retention-days: 30
