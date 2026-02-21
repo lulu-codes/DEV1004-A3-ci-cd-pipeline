@@ -17,7 +17,6 @@ concurrency:
 jobs:
   backend-tests:
     name: Backend Tests
-    runs-on: ubuntu-latest
     uses: ./.github/workflows/test_backend.yml
     # Passes the secrets to the backend tests workflow from stored secrets in GitHub Actions
     secrets:
@@ -49,3 +48,4 @@ jobs:
           else
             echo "Tests failed: PR is blocked from merging"
             exit 1
+          fi
