@@ -1,29 +1,48 @@
-# Backend .dockerignore file -
-# This file tells Docker to ignore when building the Docker image for faster builds, more lightweight image and better security.
+# Backend .dockerignore file - Excludes files from Docker build context
+# (For faster builds, smaller image and better security)
 
-# Ignore node modules folder
-# node_modules will be installed fresh in the container using npm install
+# Ignore dependencies
+# node modules - as they will be installed fresh in build
 node_modules
+yarn.lock
+.yarn/
+.pnp.*
 
 # Ignore log files
-npm-debug.log
+*.log
+logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
 
-# Ignore environment variable files (containing sensitive data like secrets and keys, important for security)
+# Ignore environment variable files
 .env
-.env.local
-.env.*.local
+.env*
 
-# Ignore git files and folders
+# Ignore version control git files
 .git
 .gitignore
+.gitattributes
 
-# Ignore IDE specific files and folders
+# Ignore IDE files and folders
 .vscode
 
-# Ignore test files and folders
-__tests__
-*.test.js
+# Ignore build artifacts
+dist/
+build/
+coverage/   # Old coverage excluded, new coverage will be generated in container
+.nyc_output/
+*.coverage
 
-# Ignore linting configuration files
-.eslintrc.cjs
-.prettierrc.json
+# Ignore CICD files
+.github/
+
+# Docker files - prevent recursion issues and shouldn't be in the image itself
+Dockerfile*
+docker-compose*.yml
+.dockerignore
+
+# OS-specific files - shouldn't be in containers
+.DS_Store        # macOS
+Thumbs.db        # Windows
+desktop.ini      # Windows
