@@ -18,7 +18,7 @@ on:
     outputs:
       image-tag:
         description: "The SHA-based image tag that was pushed"
-        value: ${{ jobs.build.outputs.image-tag }}
+        value: ${{ jobs.build-push.outputs.image-tag }}
 
   # Allow manual triggering for testing this workflow independently
   workflow_dispatch:
