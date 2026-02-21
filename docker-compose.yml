@@ -11,6 +11,7 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
+      target: development
       args:
         NODE_ENV: development
 
@@ -25,9 +26,7 @@ services:
       - NODE_ENV=development
       - JWT_SECRET_KEY=${JWT_SECRET_KEY:-dev_secret_key_change_in_production}
       - DATABASE_URI=mongodb://mongodb:27017/movie_db
-      # Using "mongodb" service name
       - LOCAL_DB_URI=mongodb://mongodb:27017/movie_db
-      # Same as DATABASE_URI for now since we're using containerised mongo and not MongoDB Atlas
       - OMDB_API_KEY=${OMDB_API_KEY:-}
       - TOKEN_HEADER_KEY=authorization
 
@@ -52,23 +51,22 @@ services:
   # MongoDB database container
   mongodb:
     image: mongo:7.0
-    # Using official mongo image, no need to build our own
     container_name: mongodb-dev
 
     ports:
       - "27017:27017"
 
     environment:
-      - MONGO_INITDB_DATABASE=movie_db
       # Creates the database on first startup
+      - MONGO_INITDB_DATABASE=movie_db
 
     volumes:
+      # This keeps data even if container stops (otherwise all data disappears when container is removed)
       - mongodb_data:/data/db
-      # This keeps data even if container stops,without this, all the data disappears when container is removed
 
+    # Checks if mongodb is responding
     healthcheck:
       test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
-      # Checks if mongodb is responding
       interval: 10s
       timeout: 5s
       retries: 5
@@ -85,7 +83,6 @@ services:
       context: ./frontend/
       dockerfile: Dockerfile
       args:
-        NODE_ENV: development
         VITE_API_URL: http://localhost:3000
 
     image: century-screening-room-frontend:dev-v1.0
@@ -100,9 +97,9 @@ services:
       - NODE_ENV=development
       - VITE_API_URL=http://localhost:3000
 
+    # Makes sure backend container starts first
     depends_on:
       - backend
-      # Makes sure backend container starts first
 
     healthcheck:
       test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:5000"]
@@ -115,9 +112,8 @@ services:
 
     networks:
       - app-network
-      # Connects frontend to app-network so backend can reach it
 
-# Volumes for persistant data storage for MongoBD Data
+# Persistant data storage for MongoBD
 volumes:
   mongodb_data:
     name: century-screening-room-mongodb-data

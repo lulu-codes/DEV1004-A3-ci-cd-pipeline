@@ -13,6 +13,7 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
+      target: test
       args:
         NODE_ENV: test
 
@@ -20,16 +21,12 @@ services:
     container_name: century-screening-room-backend-test
 
     environment:
-      # Test environment config
       - NODE_ENV=test
-      # Database URI (tests use in-memory MongoDB, but env var needed for some test configs)
       - DATABASE_URI=${DATABASE_URI:-mongodb://localhost:27017/movie_db_test}
       - LOCAL_DB_URI=mongodb://localhost:27017/movie_db_test
-      # API keys and secrets (read from environment or use defaults)
       - OMDB_API_KEY=${OMDB_API_KEY:-}
       - JWT_SECRET_KEY=${JWT_SECRET_KEY:-test_secret_key_for_testing_only}
       - TOKEN_HEADER_KEY=authorization
-      # Quiet mode for dotenv to prevent warnings about missing env vars in test environment
       - DOTENV_CONFIG_QUIET=true
 
     # Run tests as the container command
@@ -48,7 +45,6 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
       args:
-        NODE_ENV: test
         VITE_API_URL: http://localhost:3000
 
     image: century-screening-room-frontend:test-v1.0
