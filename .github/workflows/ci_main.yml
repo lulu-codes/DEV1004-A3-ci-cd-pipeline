@@ -1,0 +1,56 @@
+# CI WORKFLOW: CI Push to Main Pipeline
+# PURPOSE: Runs on push to main, re-runs backend tests then builds and pushes Docker production image
+# TRIGGER: push to main (happens automatically after a PR is merged)
+
+name: CI Main Pipeline
+
+on:
+  push:
+    branches:
+      - main
+
+# If a new commit is pushed to the same branch, cancel the previous run
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # Re-run backend tests as a safety check before building
+  backend-tests:
+    name: Backend Tests
+    uses: ./.github/workflows/test_backend.yml
+    # Passes the secrets to the backend tests workflow from stored secrets in GitHub Actions
+    secrets:
+      JWT_SECRET_KEY: ${{ secrets.JWT_SECRET_KEY }}
+      OMDB_API_KEY: ${{ secrets.OMDB_API_KEY }}
+
+  # Build and push Docker image (only runs if backend tests pass)
+  docker-build-push:
+    name: Build & Push Docker Image
+    needs: [backend-tests]
+    uses: ./.github/workflows/build_push.yml
+    secrets:
+      DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+      DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+
+  summary:
+    name: CI Main Pipeline Summary
+    needs: [docker-build-push]
+    steps:
+      - name: Writes CI Main Pipeline Summary
+      # Store long expressions as short variables for readability
+      # Writes a summary of what was built and pushed
+        run: |
+          IMAGE_TAG="${{ needs.docker-build-push.outputs.image-tag }}"
+          COMMIT="${{ github.sha }}"
+
+          cat >> $GITHUB_STEP_SUMMARY << EOF
+          ## CI Main Pipeline Complete
+          | Detail | Value |
+          |---|---|
+          | Commit | \`$COMMIT\` |
+          | Image tag pushed | \`$IMAGE_TAG\` |
+          | Docker Hub | \`lulucodes/century-screening-room-backend\` |
+
+          Deployment pipeline will trigger automatically next.
+          EOF
