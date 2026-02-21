@@ -35,6 +35,7 @@ jobs:
 
   summary:
     name: CI Main Pipeline Summary
+    runs-on: ubuntu-latest
     needs: [docker-build-push]
     steps:
       - name: Writes CI Main Pipeline Summary
