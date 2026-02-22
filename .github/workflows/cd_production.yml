@@ -13,9 +13,33 @@ on:
 
 jobs:
   # Deploy the production Docker image to Render if CI Main Pipeline successfully completes
-  deploy-render:
+  deploy-production:
     name: Deploy to Production
+    runs-on: ubuntu-latest
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
-    uses: ./.github/workflows/deploy_render.yml
-    secrets:
-      RENDER_DEPLOY_HOOK_URL: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
+
+    steps:
+      # Send POST request to Render deploy webhook
+      # This tells Render to pull the latest Docker image from Docker Hub and redeploy the service
+      - name: Deploy to Render
+        env:
+          RENDER_DEPLOY_HOOK_URL: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
+        run: |
+          curl -X POST "$RENDER_DEPLOY_HOOK_URL"
+          sleep 30
+
+      # Poll health check endpoint until app responds 200 or max attempts reached
+      - name: Health check with retry
+        env:
+          BACKEND_URL: ${{ vars.BACKEND_URL }}
+        run: |
+          for i in $(seq 1 10); do
+            status=$(curl -s -o /dev/null -w "%{http_code}" "$BACKEND_URL/health")
+            if [ "$status" = "200" ]; then
+              echo "Deployment successful"
+              exit 0
+            fi
+            sleep 15
+          done
+          echo "Health check failed"
+          exit 1
