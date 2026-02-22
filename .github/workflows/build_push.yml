@@ -69,6 +69,17 @@ jobs:
       - name: Save image tag to file
         run: echo "${{ steps.version-sha.outputs.image-tag }}" > image-tag.txt
 
+      # Writes a summary of the build and push results (added for easier readability)
+      - name: Build summary
+        run: |
+          TAG="${{ steps.version-sha.outputs.image-tag }}"
+          echo "## Build & Push Complete" >> $GITHUB_STEP_SUMMARY
+          echo "| Detail | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|--------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Image tag | \`$TAG\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Tags pushed | \`latest\`, \`$TAG\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Docker Hub | \`${{ secrets.DOCKERHUB_USERNAME }}/century-screening-room-backend\` |" >> $GITHUB_STEP_SUMMARY
+
       # Upload the image tag file to GitHub Actions Artifacts
       - name: Log image tag to artifact
         uses: actions/upload-artifact@v4

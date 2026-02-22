@@ -1,5 +1,6 @@
 # CI WORKFLOW: CI Push to Main Pipeline
 # PURPOSE: Runs on push to main, re-runs backend tests then builds and pushes Docker production image
+# Prepares for deployment to production
 # TRIGGER: push to main (happens automatically after a PR is merged)
 
 name: CI Main Pipeline

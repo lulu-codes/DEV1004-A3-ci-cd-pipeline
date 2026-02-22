@@ -37,9 +37,17 @@ jobs:
             status=$(curl -s -o /dev/null -w "%{http_code}" "$BACKEND_URL/health")
             if [ "$status" = "200" ]; then
               echo "Deployment successful"
+              echo "## CD Deployment Complete" >> $GITHUB_STEP_SUMMARY
+              echo "| Detail | Value |" >> $GITHUB_STEP_SUMMARY
+              echo "|--------|-------|" >> $GITHUB_STEP_SUMMARY
+              echo "| Status | ✅ Success |" >> $GITHUB_STEP_SUMMARY
+              echo "| Backend URL | $BACKEND_URL |" >> $GITHUB_STEP_SUMMARY
+              echo "| Image deployed | \`latest\` (from Docker Hub) |" >> $GITHUB_STEP_SUMMARY
               exit 0
             fi
             sleep 15
           done
           echo "Health check failed"
+          echo "## CD Deployment Failed" >> $GITHUB_STEP_SUMMARY
+          echo "Health check did not return 200 after 10 attempts." >> $GITHUB_STEP_SUMMARY
           exit 1
