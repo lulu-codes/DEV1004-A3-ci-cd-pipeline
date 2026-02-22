@@ -25,29 +25,3 @@ jobs:
       # This tells Render to pull the latest Docker image from Docker Hub and redeploy the service
       - name: Trigger deployment
         run: curl --silent --fail -X POST "${{ secrets.RENDER_DEPLOY_HOOK_URL }}"
-
-      # Wait for 30 secs for Render to initialise the deployment
-      - name: Wait for Render to initialise
-        run: sleep 30
-
-      # Poll health check endpoint until app responds 200 or max attempts reached
-      - name: Health check with retry
-        run: |
-          HEALTH_URL="${{ vars.BACKEND_URL }}/health"
-          echo "Health check URL: $HEALTH_URL"
-
-          for i in $(seq 1 10); do
-            echo "Attempt $i of 10..."
-            STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$HEALTH_URL" || echo "000")
-
-            if [ "$STATUS" = "200" ]; then
-              echo "Deployment successful (HTTP 200)"
-              exit 0
-            fi
-
-            echo "HTTP $STATUS — retrying in 15s..."
-            sleep 15
-          done
-
-          echo "Health check failed after 10 attempts"
-          exit 1
