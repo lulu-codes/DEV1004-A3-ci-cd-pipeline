@@ -14,11 +14,6 @@ on:
 
   # Allow manual triggering to test deployment independently
   workflow_dispatch:
-    inputs:
-      backend-url:
-        description: "Backend URL used for health check verification"
-        required: false
-        default: ${{ vars.BACKEND_URL }}
 
 jobs:
   deploy:
