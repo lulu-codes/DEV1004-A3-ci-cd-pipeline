@@ -8,6 +8,7 @@ This project demonstrates the development of setting up a CI/CD pipeline for the
 The CI/CD pipeline automates testing and deployment using GitHub Actions, Docker and Render with the frontend being served on Netlify separately.
 
 This document includes explanations for:
+
 - The purpose and functionality of the automation workflows, including diagrams that show how each phase connects and interacts.
 - The tools and systems used in this pipeline, what they do in this project, and why they were chosen over alternative options.
 - The services and technologies used by the application, and how they are managed through continuous integration and continuous delivery.
@@ -30,7 +31,8 @@ The workflows execute successfully and deploy the backend container to Render us
 
 **The pipeline works in 3 main stages including:**
 
-**1. Pull Request Validation**
+**1. Pull Request Validation:**
+
 - When a pull request is opened or updated:
 - ESLint runs on backend and frontend code.
 - Backend tests (Jest) run inside Docker.
@@ -40,24 +42,79 @@ The workflows execute successfully and deploy the backend container to Render us
 
 This acts as a quality gate to prevent broken code from reaching the main branch.
 
-**2. Merge to main**
+**2. Merge to main:**
+
 - When code is pushed to the main branch:
 - Backend tests run again as an additional safety check.
 - A production Docker image is built for the backend, preparing it for deployment to Render.
 - The image is pushed to Docker Hub with two tags:
-    - latest
-    - main-<sha> (linked to a specific commit)
+  - latest
+  - main-<sha> (linked to a specific commit)
 
 This ensures that only tested code is packaged for deployment.
 
-**3. Deployment to Render**
+**3. Deployment to Render:**
+
 - After the image is successfully built and pushed:
-    - The workflow triggers Render using a Deploy Hook URL.
-    - Render pulls the latest image from Docker Hub.
-    - The pipeline checks the /health endpoint to confirm the deployment succeeded.
-    - If the health check fails, the workflow fails.
+  - The workflow triggers Render using a Deploy Hook URL.
+  - Render pulls the latest image from Docker Hub.
+  - The pipeline checks the /health endpoint to confirm the deployment succeeded.
+  - If the health check fails, the workflow fails.
 
 This final step ensures that the backend is live and responding correctly after deployment.
+
+---
+
+### CI/CD Pipeline Flow Diagram
+
+```mermaid
+flowchart TB
+    subgraph Development
+        DEV[Developer] --> BRANCH[Feature Branch]
+        BRANCH --> CODE[Write Code]
+    end
+
+    subgraph PullRequest [Pull Request Workflow]
+        CODE --> PR[Create PR]
+        PR --> CIPR[ci_pr.yml]
+
+        CIPR --> LINT[Lint Check]
+        CIPR --> BTEST[Backend Tests]
+        CIPR --> FTEST[Frontend Tests]
+
+        LINT --> GATE{All Checks Pass?}
+        BTEST --> GATE
+        FTEST --> GATE
+
+        GATE -->|No| FIX[Fix Issues]
+        FIX --> CODE
+        GATE -->|Yes| MERGE[Merge to main]
+    end
+
+    subgraph MainBranch [Main Branch Workflow]
+        MERGE --> PUSH[Push Event]
+        PUSH --> CIMAIN[ci_main.yml]
+
+        CIMAIN --> RETEST[Run Tests]
+        RETEST --> BUILD[Build Docker Image]
+        BUILD --> TAG[Tag Image]
+        TAG --> PUSH_HUB[Push to Docker Hub]
+
+        PUSH_HUB --> CD[cd_production.yml]
+        CD --> WEBHOOK[Trigger Render Deploy]
+        WEBHOOK --> DEPLOY[Deploy Backend]
+        DEPLOY --> HEALTH[Health Check]
+    end
+
+    subgraph FrontendDeploy [Frontend Deployment]
+        PUSH --> NETLIFY[Netlify Auto Deploy]
+        NETLIFY --> BUILD_FE[Build Frontend]
+        BUILD_FE --> DEPLOY_FE[Deploy Frontend]
+    end
+
+    HEALTH --> LIVE_BE[Backend Live]
+    DEPLOY_FE --> LIVE_FE[Frontend Live]
+```
 
 ---
 
@@ -68,9 +125,11 @@ These are the main tools and systems I chose including a description of what the
 ### 1. GitHub Actions
 
 **What it does:**
+
 - GitHub Actions is a CI/CD platform which runs workflow YAML files automatically when certain events occur in the repository (such as pull requests or pushes).
 
 **What it's used for in this project:**
+
 - Run tests for backend (Jest) and frontend (Vitest) inside Docker to check code and catch bugs early and acts as a validation check to ensure that tests passes successfully before merging to main.
 - Runs ESLint on backend and frontend
 - Re-runs backend tests on merge to main
@@ -81,11 +140,13 @@ These are the main tools and systems I chose including a description of what the
 **Why I chose it over alternatives:**
 
 I chose GitHub Actions because:
+
 - It integrates directly with GitHub (no extra setup required making it more easier and seamless to use).
 - It is free for public repositories (which is beneficial for a student project to avoid incurring costs).
 - It supports reusable workflows which helps keep the YAML files DRY.
 
 **Compared to alternatives:**
+
 - **Jenkins** requires self-hosting and server configuration. For a student project, this adds unnecessary infrastructure complexity which I wanted to avoid to keep it simplified for this project scope.
 - **CircleCI** provides cloud CI/CD but has paid usage limits and pricing tiers that are not necessary at this scale.
 
@@ -96,10 +157,12 @@ For this project, GitHub Actions was the simplest and most appropriate tool to u
 ### 2. Docker and Docker Compose
 
 **What it does:**
+
 - Docker packages applications into containers so they run the same way across environments.
 - Docker Compose manages multi-container setups which is used in this case for setting up the backend, frontend and database (for development and testing).
 
 **What it's used for in this project:**
+
 - It's used in `test_backend.yml` to run isolated tests (in a Docker container to control environment tests).
 - Runs backend and frontend tests using `docker-compose.test.yml`.
 - Backend tests use `mongodb-memory-server` (no external database required in CI).
@@ -107,12 +170,14 @@ For this project, GitHub Actions was the simplest and most appropriate tool to u
 
 **Why I chose it over alternatives:**
 I chose to use Docker because:
+
 - It is a highly industry standard tool used for containerisation, enabling tests and deployments to be more consistent across different environments.
 - Keeps CI testing environment consistent with production image.
 - Avoids "works on my machine" issues.
 - It is free and more simpler to use than compared to the alternative options below.
 
 In comparison to the alternative options, such as:
+
 - Kubernetes: In this case, I considered Kubernetes to be more complex and not required for a single backend deployment for this project.
 
 ---
@@ -120,15 +185,18 @@ In comparison to the alternative options, such as:
 ### 3. Docker Hub (Image repository)
 
 **What it does:**
+
 - Docker Hub stores built Docker container images in a cloud registry, keeping a revision history of Docker built images including image tags to help identify different builds.
 
 **What it's used for in this project:**
+
 - Docker Repository: `lulucodes/century-screening-room-backend`.
 - On merge to `main`, the pipeline pushes include version image tags including:
-    - `latest` (is used by Render).
-    - `main-<sha>` (provides commit traceability).
+  - `latest` (is used by Render).
+  - `main-<sha>` (provides commit traceability).
 
 **Why I chose it over alternatives:**
+
 - Free for public repositories.
 - Integrates seamlessly with GitHub Actions.
 - Simpler setup compared to AWS ECR.
@@ -138,14 +206,17 @@ In comparison to the alternative options, such as:
 ### 4. Render (Cloud Platform)
 
 **What it does:**
+
 - Render hosts Docker-based web services and automatically redeploys on trigger.
 - Render is the cloud host used for backend deployment.
 
 **What it's used for in this project:**
+
 - In `cd_production.yml`, it triggers deployment via a webhook to deploy the latest tag image from Docker Hub and runs the backend as a web service. Then deployment is confirmed using a /health endpoint to check and that it's live.
 - It also handles scaling and connects to services like a database via environment variables setup.
 
 **Why I chose it over alternatives:**
+
 - Render has a free tier suitable for the current scope of this project.
 - It provides seamless Docker support and auto-deploys.
 - Free tier suitable for student projects.
@@ -153,6 +224,7 @@ In comparison to the alternative options, such as:
 - It requires less setup than AWS or Google Cloud.
 
 In comparison to other Cloud Hosting Platforms such as:
+
 - Google Cloud Run and AWS ECS: Requires more complex configurations and billing setup and can incur costs especially if not managed properly.
 - Heroku:
 - Railway:
@@ -172,8 +244,47 @@ In comparison to other Cloud Hosting Platforms such as:
 - CI tests use `mongodb-memory-server` instead
 
 **Why I chose it over alternatives:**
+
 - To keep the same and familiar cloud hosting platform used in project.
 - Free and beginner friendly UI to use and easy setup and most suitable cloud database used throughout project.
+
+---
+
+## Service Architecture Diagram
+
+```mermaid
+flowchart TB
+    subgraph External [External Services]
+        DEV[Developer] --> GH[GitHub Repository]
+    end
+
+    subgraph CI [Continuous Integration]
+        GH --> GHA[GitHub Actions]
+        GHA --> LINT[ESLint/Prettier]
+        GHA --> TEST[Vitest/Jest]
+    end
+
+    subgraph Build [Build & Registry]
+        GHA --> DOCKER[Docker Build]
+        DOCKER --> HUB[Docker Hub Registry]
+    end
+
+    subgraph CD [Continuous Deployment]
+        HUB --> RENDER[Render Platform]
+        GH --> NETLIFY[Netlify]
+    end
+
+    subgraph Production [Production Environment]
+        RENDER --> BE[Backend API]
+        NETLIFY --> FE[Frontend App]
+        BE --> DB[(MongoDB Atlas)]
+        FE -.API Calls.-> BE
+    end
+
+    style Production fill:#00000
+    style Build fill:#00000
+    style CI fill:#00000
+```
 
 ---
 
@@ -184,6 +295,7 @@ In comparison to other Cloud Hosting Platforms such as:
 **Purpose:** Ensures code is tested and passes successfully before merge
 
 **What it does:**
+
 - Run ESLint (fails on warnings)
 - Runs backend tests in Docker container (using Jest)
 - Runs frontend tests in Docker container (using Vitest)
@@ -191,11 +303,13 @@ In comparison to other Cloud Hosting Platforms such as:
 - Uploads test logs as artifacts
 
 **Reusable workflows called:**
+
 - `test_backend.yml`
 - `test_frontend.yml`
 - (These workflow tests can also be run independently on workflow_displatch)
 
 **Triggers:**
+
 - `pull_request` (branch: main)
 - `workflow_dispatch` (allows for manual trigger)
 
@@ -206,15 +320,18 @@ In comparison to other Cloud Hosting Platforms such as:
 **Purpose:** Build and publish production Docker image after merge to main
 
 **What it does:**
+
 - Re-runs backend tests
 - Builds production image from backend/Dockerfile (target: production)
 - Pushes to Docker Hub with tags: :latest and :main-<sha>
 - Writes a pipeline summary with commit and image tag
 
 **Reusable workflows called:**
+
 - `build_push.yml`
 
 **Trigger:**
+
 - `push` to main
 
 ---
@@ -224,13 +341,56 @@ In comparison to other Cloud Hosting Platforms such as:
 **Purpose:** Deploy backend to Render after successful build
 
 **What it does:**
+
 - Triggers only when CI Main Pipeline succeeds (using workflow_run + if successful condition)
 - Sends POST request to Render deploy hook
 - Polls `BACKEND_URL/health` and retries up to 10 times
 - Fails workflow if no 200 response.
 
 **Trigger:**
+
 - `workflow_run` after CI Main completes successfully
+
+## Deployment Flow Diagram
+
+```mermaid
+sequenceDiagram
+    participant Dev as Developer
+    participant GH as GitHub
+    participant GHA as GitHub Actions
+    participant Hub as Docker Hub
+    participant Render as Render
+    participant Netlify as Netlify
+    participant User as End User
+
+    Dev->>GH: Push to feature branch
+    Dev->>GH: Create Pull Request
+    GH->>GHA: Trigger ci_pr.yml
+    GHA->>GHA: Run linting
+    GHA->>GHA: Run tests
+    GHA->>GH: Report status
+
+    alt Tests Pass
+        Dev->>GH: Merge to main
+        GH->>GHA: Trigger ci_main.yml
+        GHA->>GHA: Run tests
+        GHA->>GHA: Build Docker image
+        GHA->>Hub: Push image
+
+        GHA->>GHA: Trigger cd_production.yml
+        GHA->>Render: Deploy webhook
+        Render->>Hub: Pull latest image
+        Render->>Render: Deploy container
+        GHA->>Render: Health check
+
+        GH->>Netlify: Auto deploy trigger
+        Netlify->>Netlify: Build frontend
+        Netlify->>User: Serve frontend
+        User->>Render: API requests
+    else Tests Fail
+        GHA->>GH: Block merge
+    end
+```
 
 ---
 
@@ -239,6 +399,7 @@ In comparison to other Cloud Hosting Platforms such as:
 Secrets are not hardcoded in workflow files. They are injected securely through GitHub Actions Settings (under Secrets and variables).
 
 **Secrets Used:**
+
 - `DATABASE_URI`
 - `DOCKERHUB_USERNAME`
 - `DOCKERHUB_TOKEN`
@@ -247,6 +408,7 @@ Secrets are not hardcoded in workflow files. They are injected securely through 
 - `RENDER_DEPLOY_HOOK_URL`
 
 **Repository Variables:**
+
 - `BACKEND_URL`
 - `VITE_API_URL`
 
@@ -266,39 +428,65 @@ Key dependencies:
 - Deployment success confirmed via health check.
 - (Backend tests depend only on in-memory MongoDB during CI).
 
+### Service Dependencies
+
+```mermaid
+flowchart LR
+    Dev[Developer] --> Repo[GitHub Repo]
+    Repo --> GHA[GitHub Actions]
+    GHA --> Docker[Docker Build]
+    Docker --> Hub[Docker Hub]
+    Hub --> Render[Render]
+    Render --> Atlas[MongoDB Atlas]
+    Repo --> Netlify[Netlify]
+    Netlify --> Frontend[Frontend Live]
+    Render --> Backend[Backend Live]
+```
+
 ---
 
 ## Screenshots
 
 ### CI PR Tests & Validation Checks
+
 ![CI PR Tests](docs/images/CI-PR-Tests-Validation-Checks.png)
 
 ### CI Main Pipeline
+
 ![CI Main Pipeline](docs/images/CI-main-pipeline.png)
 
 ### CI Main Pipeline Summary
+
 ![CI Main Summary](docs/images/CI-main-pipeline-docker-summary.png)
 
 ### Build & Push Workflow
+
 ![Build Push](docs/images/Build-push-workflow.png)
 
 ### CD Production Pipeline
+
 ![CD Production](docs/images/CD-Production-Pipeline.png)
 
 ### Backend Tests
+
 ![Backend Tests](docs/images/Test-backend.png)
 
 ### Frontend Tests
+
 ![Frontend Tests](docs/images/Test-Frontend.png)
 
 ### Docker Hub Images
+
 ![Docker Hub](docs/images/Dockerhub-images.png)
 
 ### Netlify Deployment
+
 ![Netlify](docs/images/Netlify.png)
 
 ### Render Environment Variables
+
 ![Render Env](docs/images/Render-env-variables.png)
 
 ### Render Deployment
+
 ![Render Deployment](docs/images/Render-proof-of-deployment.png)
