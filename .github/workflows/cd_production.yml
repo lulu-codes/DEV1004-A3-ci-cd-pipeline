@@ -17,15 +17,11 @@ jobs:
     name: Deploy to Production
     runs-on: ubuntu-latest
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
-    secrets:
-      RENDER_DEPLOY_HOOK_URL: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
-
-      name: Deploy to Render
 
     steps:
       # Send POST request to Render deploy webhook
       # This tells Render to pull the latest Docker image from Docker Hub and redeploy the service
-      - name: Trigger Render Deployment
+      - name: Deploy to Render
         env:
           RENDER_DEPLOY_HOOK_URL: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
         run: |
