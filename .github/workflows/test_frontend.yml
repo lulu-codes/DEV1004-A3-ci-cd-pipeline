@@ -46,7 +46,14 @@ jobs:
             --abort-on-container-exit \
             --exit-code-from frontend-test 2>&1 | tee frontend-test.log
 
-        # Upload test logs to GitHub Actions Artifacts (stored for persistant data set to retain for 30 days)
+      # Write test summary to job output
+      - name: Frontend Test Results summary
+        if: always()
+        run: |
+          echo "## Frontend test results" >> $GITHUB_STEP_SUMMARY
+          echo "Full logs available in artifacts." >> $GITHUB_STEP_SUMMARY
+
+      # Upload test logs to GitHub Actions Artifacts (stored for persistent data set to retain for 30 days)
       - name: Upload test logs
         if: always()
         uses: actions/upload-artifact@v4
