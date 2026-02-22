@@ -1,9 +1,9 @@
-# CI WORKFLOW: CI Pull Request Tests
+# CI WORKFLOW: CI Pull Request Tests & Validation Checks
 # PURPOSE: Runs lint and backend and frontend tests when a PR is opened to main to validate quality before merging into main.
 # RESULTS: If any check fails, PR is blocked from merging, otherwise PR is allowed to merge.
 # TRIGGER: pull_request to main branch, or workflow_dispatch for manual run.
 
-name: CI Pull Request Tests
+name: CI Pull Request Tests & Validation Checks
 
 on:
   pull_request:
