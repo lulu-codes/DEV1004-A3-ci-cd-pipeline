@@ -1,5 +1,6 @@
 # CI WORKFLOW: CI Push to Main Pipeline
 # PURPOSE: Runs on push to main, re-runs backend tests then builds and pushes Docker production image
+# Prepares for deployment to production
 # TRIGGER: push to main (happens automatically after a PR is merged)
 
 name: CI Main Pipeline
@@ -38,9 +39,9 @@ jobs:
     runs-on: ubuntu-latest
     needs: [docker-build-push]
     steps:
-      - name: Writes CI Main Pipeline Summary
       # Store long expressions as short variables for readability
       # Writes a summary of what was built and pushed
+      - name: Writes CI Main Pipeline Summary
         run: |
           IMAGE_TAG="${{ needs.docker-build-push.outputs.image-tag }}"
           COMMIT="${{ github.sha }}"
