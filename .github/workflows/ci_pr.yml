@@ -64,20 +64,25 @@ jobs:
 
     steps:
       # Check if lint and all tests passed successfully
+      # Writes a summary of the PR tests and lint validation results (added for easier readability)
       - name: Check lint and tests passed
         run: |
           LINT="${{ needs.lint.result }}"
           BACKEND="${{ needs.backend-tests.result }}"
           FRONTEND="${{ needs.frontend-tests.result }}"
 
-          echo "Lint: $LINT"
-          echo "Backend tests: $BACKEND"
-          echo "Frontend tests: $FRONTEND"
+          echo "## PR Tests and Lint Validation Results" >> $GITHUB_STEP_SUMMARY
+          echo "| Check | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|-------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Lint | $LINT |" >> $GITHUB_STEP_SUMMARY
+          echo "| Backend tests | $BACKEND |" >> $GITHUB_STEP_SUMMARY
+          echo "| Frontend tests | $FRONTEND |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
 
           if [[ "$LINT" == "success" && "$BACKEND" == "success" && "$FRONTEND" == "success" ]]; then
-            echo "All checks passed: PR is ready to merge"
+            echo "✅ **All checks passed** - PR is ready to merge" >> $GITHUB_STEP_SUMMARY
             exit 0
           else
-            echo "One or more checks failed: PR is blocked from merging"
+            echo "❌ **One or more checks failed** - PR is blocked from merging" >> $GITHUB_STEP_SUMMARY
             exit 1
           fi
