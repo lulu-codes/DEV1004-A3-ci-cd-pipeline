@@ -1,0 +1,21 @@
+# CD WORKFLOW: CD Production Pipeline
+# PURPOSE: Deploys the production Docker image to Render after CI Main Pipeline successfully completes
+# TRIGGER: push to main (happens automatically after a PR is merged)
+
+name: CD Production Pipeline
+
+on:
+  # Trigger this workflow only after the CI Main Pipeline successfully completes
+  workflow_run:
+    workflows: ["CI Main Pipeline"]
+    types: [completed]
+    branches: [main]
+
+jobs:
+  # Deploy the production Docker image to Render if CI Main Pipeline successfully completes
+  deploy-render:
+    name: Deploy to Production
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    uses: ./.github/workflows/deploy_render.yml
+    secrets:
+      RENDER_DEPLOY_HOOK_URL: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
