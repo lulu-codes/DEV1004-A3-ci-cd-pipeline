@@ -6,9 +6,10 @@ name: CI Pull Request Tests
 
 on:
   pull_request:
-    branches:
-      - main
-    workflow_dispatch: 
+    branches: [main]
+    
+  # Allow manual triggering to test the CI PR pipeline independently
+  workflow_dispatch: 
 
 # If a new commit is pushed to the same PR, cancel the previous run
 concurrency:
