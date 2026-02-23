@@ -93,6 +93,11 @@ COPY src ./src/
 # STAGE 7: Production environment - minimal image to run the app (used by CI/CD pipelines for deployment)
 FROM base AS production
 
+# Accept build argument for release version (passed from CI/CD pipeline)
+ARG RELEASE_VERSION
+# Set as environment variable so it's available at runtime
+ENV RELEASE_VERSION=$RELEASE_VERSION
+
 # Install only production dependencies (and clean up npm cache to reduce image size)
 RUN npm ci --only=production && \
     npm cache clean --force
