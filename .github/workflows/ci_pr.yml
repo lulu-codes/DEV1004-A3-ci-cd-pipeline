@@ -5,12 +5,17 @@
 
 name: CI Pull Request Tests & Validation Checks
 
+# Least-privilege permissions for security
+permissions:
+  contents: read # Read repository contents
+  pull-requests: read # Read PR information
+
 on:
   pull_request:
     branches: [main]
-    
+
   # Allow manual triggering to test the CI PR pipeline independently
-  workflow_dispatch: 
+  workflow_dispatch:
 
 # If a new commit is pushed to the same PR, cancel the previous run
 concurrency:
@@ -27,14 +32,23 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
+      - name: Setup Node.js for backend
         uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          node-version: "22"
+          cache: "npm"
+          cache-dependency-path: backend/package-lock.json
 
       - name: Lint backend
         run: npm ci && npm run lint -- --max-warnings 0
         working-directory: ./backend
+
+      - name: Setup Node.js for frontend
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+          cache-dependency-path: frontend/package-lock.json
 
       - name: Lint frontend
         run: npm ci && npm run lint -- --max-warnings 0
