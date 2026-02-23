@@ -5,6 +5,12 @@
 
 name: CI Main Pipeline
 
+# Least-privilege permissions for security
+permissions:
+  contents: read # Read repository contents
+  actions: write # Upload/download artifacts
+  packages: write # Push to Docker Hub (via secrets)
+
 on:
   push:
     branches:

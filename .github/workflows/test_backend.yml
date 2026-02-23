@@ -4,6 +4,11 @@
 
 name: Test Backend
 
+# Least-privilege permissions for security
+permissions:
+  contents: read # Read repository contents
+  actions: write # Upload artifacts
+
 on:
   # Allow this workflow to be called by other workflows and pass required secrets
   workflow_call:
