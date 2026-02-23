@@ -4,6 +4,11 @@
 
 name: CD Production Pipeline
 
+# Least-privilege permissions for security
+permissions:
+  contents: read # Read repository contents
+  actions: read # Download artifacts from triggering workflow
+
 on:
   # Trigger this workflow only after the CI Main Pipeline successfully completes
   workflow_run:
@@ -19,6 +24,22 @@ jobs:
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
 
     steps:
+      # Download the image tag artifact from the CI Main workflow run
+      - name: Download image tag artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: docker-image-tag
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          run-id: ${{ github.event.workflow_run.id }}
+
+      # Read the expected version from the artifact
+      - name: Read expected version
+        id: expected-version
+        run: |
+          EXPECTED_TAG=$(cat image-tag.txt)
+          echo "expected-tag=$EXPECTED_TAG" >> $GITHUB_OUTPUT
+          echo "Expected version: $EXPECTED_TAG"
+
       # Send POST request to Render deploy webhook
       # This tells Render to pull the latest Docker image from Docker Hub and redeploy the service
       - name: Deploy to Render
@@ -32,22 +53,26 @@ jobs:
       - name: Health check with retry
         env:
           BACKEND_URL: ${{ vars.BACKEND_URL }}
+          EXPECTED_TAG: ${{ steps.expected-version.outputs.expected-tag }}
         run: |
           for i in $(seq 1 10); do
             status=$(curl -s -o /dev/null -w "%{http_code}" "$BACKEND_URL/health")
             if [ "$status" = "200" ]; then
-              echo "Deployment successful"
+              echo "✅ Deployment successful - Health check passed"
               echo "## CD Deployment Complete" >> $GITHUB_STEP_SUMMARY
               echo "| Detail | Value |" >> $GITHUB_STEP_SUMMARY
               echo "|--------|-------|" >> $GITHUB_STEP_SUMMARY
               echo "| Status | ✅ Success |" >> $GITHUB_STEP_SUMMARY
               echo "| Backend URL | $BACKEND_URL |" >> $GITHUB_STEP_SUMMARY
-              echo "| Image deployed | \`latest\` (from Docker Hub) |" >> $GITHUB_STEP_SUMMARY
+              echo "| Expected Version | \`$EXPECTED_TAG\` |" >> $GITHUB_STEP_SUMMARY
+              echo "| Image Tag | \`latest\` (built from \`$EXPECTED_TAG\`) |" >> $GITHUB_STEP_SUMMARY
+              echo "" >> $GITHUB_STEP_SUMMARY
+              echo "**Note:** Version \`$EXPECTED_TAG\` is baked into the Docker image as \`RELEASE_VERSION\` env var for debugging." >> $GITHUB_STEP_SUMMARY
               exit 0
             fi
             sleep 15
           done
-          echo "Health check failed"
+          echo "❌ Health check failed"
           echo "## CD Deployment Failed" >> $GITHUB_STEP_SUMMARY
           echo "Health check did not return 200 after 10 attempts." >> $GITHUB_STEP_SUMMARY
           exit 1
