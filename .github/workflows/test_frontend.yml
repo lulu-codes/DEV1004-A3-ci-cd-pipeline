@@ -1,8 +1,13 @@
 # WORKFLOW FOR: Frontend Tests
 # PURPOSE: Run frontend tests when called by other workflows or manually triggered
-# TESTS: Runs frontend unit and integration tests isolated in a Docker container (focusing on component rendering, UI and API calls)
+# TESTS: Runs frontend unit tests directly with Node (tests are fully mocked, no external dependencies needed)
 
 name: Test Frontend
+
+# Least-privilege permissions for security
+permissions:
+  contents: read # Read repository contents
+  actions: write # Upload artifacts
 
 on:
   workflow_call:
@@ -29,22 +34,27 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-        # Setup Docker Buildx for building and running test containers
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+      # Setup Node.js environment
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+          cache-dependency-path: frontend/package-lock.json
 
-        # Run frontend tests in Docker container
+      # Install dependencies
+      - name: Install dependencies
+        working-directory: ./frontend
+        run: npm ci
+
+      # Run frontend tests (fully mocked, no Docker needed)
       - name: Run Frontend Tests
         id: run-tests
-
-        # This runs the tests using Docker Compose, ensuring it builds the image and exits with the correct code based on test results
-        # npm test exits with 0 → command exits with 0 → step passes ✅
-        # npm test exits with 1 → command exits with 1 → step fails ❌
-        run: |
-          docker compose -f docker-compose.test.yml up frontend-test \
-            --build \
-            --abort-on-container-exit \
-            --exit-code-from frontend-test 2>&1 | tee frontend-test.log
+        working-directory: ./frontend
+        env:
+          CI: true
+          NODE_ENV: test
+        run: npm test 2>&1 | tee ../frontend-test.log
 
       # Write test summary to job output
       - name: Frontend Test Results summary
@@ -61,8 +71,3 @@ jobs:
           name: frontend-test-logs-${{ github.run_id }}
           path: frontend-test.log
           retention-days: 30
-
-        # Cleanup containers and volumes after tests run, regardless of test success or failure
-      - name: Cleanup
-        if: always()
-        run: docker compose -f docker-compose.test.yml down -v
